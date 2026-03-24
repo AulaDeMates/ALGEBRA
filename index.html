@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estudio Pro - Álgebra</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2canvas para descargar el diploma -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- FontAwesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Fuente redondeada y legible para las correcciones -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f46e5',
+                        secondary: '#10b981',
+                        dark: '#1e293b',
+                    },
+                    keyframes: {
+                        shake: {
+                            '0%, 100%': { transform: 'translateX(0)' },
+                            '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-4px)' },
+                            '20%, 40%, 60%, 80%': { transform: 'translateX(4px)' }
+                        }
+                    },
+                    animation: {
+                        shake: 'shake 0.4s ease-in-out'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { 
+            font-family: 'Inter', sans-serif; 
+            /* Fondo sutil tipo malla escolar, pero alegre */
+            background-color: #f8fafc;
+            background-image: radial-gradient(#e2e8f0 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+        }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Botones 3D ajustados (no gordos) */
+        .btn-3d {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            border-bottom-width: 4px;
+        }
+        .btn-3d:active:not(:disabled) {
+            border-bottom-width: 0px;
+            transform: translateY(4px);
+        }
+        
+        /* Opciones del Quiz */
+        .option-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .option-btn:hover:not(:disabled) { 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 15px -3px rgba(79, 70, 229, 0.1); 
+        }
+        .option-btn.correct { 
+            background-color: #10b981; color: white; border-color: #059669; 
+            box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.3); 
+        }
+        .option-btn.incorrect { 
+            background-color: #ef4444; color: white; border-color: #dc2626; 
+            box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.3); 
+        }
+        
+        /* Diploma vibrante */
+        .diploma-bg {
+            background-image: radial-gradient(circle at center, #fffbeb 0%, #fef3c7 100%);
+        }
+
+        /* Estilo de letra redondeada y bonita para las explicaciones */
+        .feedback-font {
+            font-family: 'Nunito', sans-serif;
+            font-size: 1.15rem;
+            line-height: 1.5;
+            letter-spacing: 0.2px;
+        }
+        
+        /* Scrollbar estilizada */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- Navegación Colorida -->
+    <nav class="bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-100 px-6 py-4 flex justify-between items-center z-50 shrink-0 sticky top-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-br from-primary to-blue-600 text-white p-2 rounded-xl shadow-md">
+                <i class="fa-solid fa-graduation-cap text-xl"></i>
+            </div>
+            <h1 class="text-2xl font-extrabold text-slate-800 hidden sm:block tracking-tight">Estudio Pro</h1>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="bg-white px-4 py-2 rounded-full flex items-center gap-2 border-2 border-indigo-50 shadow-sm transition hover:shadow">
+                <i class="fa-solid fa-star text-yellow-400 text-xl drop-shadow-sm"></i>
+                <span id="score-display" class="font-bold text-indigo-700 text-lg">0 pts</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenedor Principal -->
+    <main class="flex-1 overflow-y-auto p-4 sm:p-8 relative">
+        <div class="max-w-5xl mx-auto">
+
+            <!-- Vista: Login -->
+            <div id="login-view" class="fade-in max-w-sm mx-auto mt-12 bg-white p-8 rounded-2xl shadow-xl border border-slate-100 text-center relative z-10">
+                <div class="bg-gradient-to-br from-primary to-indigo-600 text-white w-20 h-20 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-6 shadow-lg shadow-indigo-200 transform rotate-3 hover:rotate-0 transition duration-300">
+                    <i class="fa-solid fa-user-ninja"></i>
+                </div>
+                <h2 class="text-2xl font-extrabold text-dark mb-2 tracking-tight">Tu Perfil</h2>
+                <p class="text-slate-500 mb-6 text-sm leading-relaxed font-medium">Usa tu alias y un PIN secreto de 4 números. ¡Apúntalos para no perder tus puntos!</p>
+                
+                <div class="space-y-4 mb-2">
+                    <div class="relative group">
+                        <i class="fa-solid fa-mask absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"></i>
+                        <input type="text" id="student-alias" placeholder="Tu Alias (Ej: Laura)" class="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-slate-200 focus:border-primary focus:ring-4 focus:ring-indigo-50 transition-all text-base font-bold bg-slate-50 focus:bg-white text-dark">
+                    </div>
+                    <div class="relative group">
+                        <i class="fa-solid fa-lock absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"></i>
+                        <input type="password" id="student-pin" placeholder="PIN (Ej: 1234)" maxlength="4" inputmode="numeric" class="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-slate-200 focus:border-primary focus:ring-4 focus:ring-indigo-50 transition-all text-base font-black tracking-widest bg-slate-50 focus:bg-white text-dark text-center">
+                    </div>
+                </div>
+                
+                <p id="login-error" class="text-red-500 text-sm font-bold mb-4 h-5"></p>
+                
+                <button id="login-btn" onclick="login()" class="btn-3d w-full bg-primary border-indigo-700 text-white px-6 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-lg">
+                    <i class="fa-solid fa-play"></i> Comenzar
+                </button>
+            </div>
+
+            <!-- Vista: Dashboard -->
+            <div id="dashboard-view" class="hidden fade-in space-y-8">
+                <!-- Tarjeta de Bienvenida Colorida -->
+                <div class="relative rounded-3xl p-8 sm:p-10 text-white shadow-xl flex flex-col md:flex-row justify-between items-center gap-6 overflow-hidden bg-gradient-to-br from-indigo-600 via-primary to-blue-600">
+                    
+                    <!-- SVG Matemático de fondo -->
+                    <svg class="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none mix-blend-overlay" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" preserveAspectRatio="xMidYMid slice">
+                        <defs>
+                            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.3"/>
+                            </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#grid)" />
+                        <g fill="#ffffff" font-family="'Comic Sans MS', 'Chalkboard SE', sans-serif" font-size="28" font-style="italic" opacity="0.9">
+                            <text x="8%" y="25%">x² + y² = z²</text>
+                            <text x="30%" y="80%">(a+b)² = a² + 2ab + b²</text>
+                            <text x="60%" y="30%">f(x) = ax² + bx + c</text>
+                            <text x="75%" y="85%">x = (-b ± √Δ) / 2a</text>
+                            <text x="15%" y="65%">A = π·r²</text>
+                        </g>
+                    </svg>
+
+                    <div class="relative z-10 w-full md:w-2/3">
+                        <div class="inline-flex items-center gap-2 bg-white/20 px-4 py-1.5 rounded-full text-sm font-bold tracking-wide mb-4 backdrop-blur-md shadow-sm border border-white/20">
+                            <i class="fa-solid fa-users text-yellow-300"></i> 1º de ESO D
+                        </div>
+                        <h2 id="greeting-text" class="text-4xl sm:text-5xl font-extrabold mb-4 drop-shadow-md tracking-tight">¡Hola, Estudiante! 👋</h2>
+                        <p class="text-indigo-50 mb-6 text-lg drop-shadow-sm font-medium">
+                            Consigue al menos <strong class="text-white bg-white/20 px-2.5 py-1 rounded-lg">20 puntos</strong> en cada bloque para desbloquear tu Diploma.
+                        </p>
+                    </div>
+                    <div class="hidden md:flex relative z-10 w-1/3 justify-center transform hover:scale-110 hover:-rotate-6 transition duration-500 cursor-default">
+                        <i class="fa-solid fa-award text-8xl text-yellow-300 drop-shadow-2xl opacity-90"></i>
+                    </div>
+                </div>
+
+                <!-- Tarjetas de Categorías -->
+                <div>
+                    <h3 class="text-xl font-extrabold mb-5 flex items-center gap-3 text-dark">
+                        <span class="bg-indigo-100 text-primary w-10 h-10 rounded-xl flex items-center justify-center"><i class="fa-solid fa-gamepad"></i></span> 
+                        Misiones de Álgebra
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                        <!-- Categoría 1 -->
+                        <button onclick="startQuiz('Lenguaje Algebraico')" class="relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm hover:shadow-lg border-2 border-slate-100 hover:border-blue-400 transition-all duration-300 text-left group flex flex-col h-full hover:-translate-y-1">
+                            <svg class="absolute inset-0 w-full h-full pointer-events-none transition-transform duration-700 group-hover:scale-110 opacity-[0.06] group-hover:opacity-[0.15]" xmlns="http://www.w3.org/2000/svg">
+                                <g fill="#3b82f6" font-family="'Nunito', sans-serif" font-size="32" font-weight="bold">
+                                    <text x="15%" y="30%" transform="rotate(-10)">2x + y</text>
+                                    <text x="70%" y="25%" transform="rotate(15)">x²</text>
+                                    <text x="10%" y="80%" transform="rotate(-5)">n + 1</text>
+                                    <text x="65%" y="75%" transform="rotate(10)">x / 2</text>
+                                </g>
+                            </svg>
+                            <div class="relative z-10 flex flex-col h-full w-full">
+                                <div class="bg-blue-100 text-blue-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                                    <i class="fa-solid fa-language"></i>
+                                </div>
+                                <h4 class="font-bold text-lg text-dark mb-1">Lenguaje Algebraico</h4>
+                                <p class="text-xs text-slate-500 flex-grow font-medium leading-relaxed">Traduce del lenguaje común a expresiones matemáticas.</p>
+                                
+                                <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center w-full">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Progreso</span>
+                                    <span id="cat-lenguaje-pts" class="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">0/20</span>
+                                </div>
+                            </div>
+                        </button>
+                        
+                        <!-- Categoría 2 -->
+                        <button onclick="startQuiz('Valor Numérico')" class="relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm hover:shadow-lg border-2 border-slate-100 hover:border-green-400 transition-all duration-300 text-left group flex flex-col h-full hover:-translate-y-1">
+                            <svg class="absolute inset-0 w-full h-full pointer-events-none transition-transform duration-700 group-hover:scale-110 opacity-[0.06] group-hover:opacity-[0.15]" xmlns="http://www.w3.org/2000/svg">
+                                <g fill="#10b981" font-family="'Nunito', sans-serif" font-size="30" font-weight="bold">
+                                    <text x="15%" y="25%" transform="rotate(10)">x = 3</text>
+                                    <text x="50%" y="40%" transform="rotate(-5)">2(3)+1=7</text>
+                                    <text x="10%" y="75%" transform="rotate(-15)">f(2)=5</text>
+                                    <text x="65%" y="85%" transform="rotate(10)">y = -1</text>
+                                </g>
+                            </svg>
+                            <div class="relative z-10 flex flex-col h-full w-full">
+                                <div class="bg-green-100 text-green-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                                    <i class="fa-solid fa-calculator"></i>
+                                </div>
+                                <h4 class="font-bold text-lg text-dark mb-1">Valor Numérico</h4>
+                                <p class="text-xs text-slate-500 flex-grow font-medium leading-relaxed">Sustituye incógnitas por números y calcula.</p>
+
+                                <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center w-full">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Progreso</span>
+                                    <span id="cat-valor-pts" class="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">0/20</span>
+                                </div>
+                            </div>
+                        </button>
+                        
+                        <!-- Categoría 3 -->
+                        <button onclick="startQuiz('Monomios')" class="relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm hover:shadow-lg border-2 border-slate-100 hover:border-purple-400 transition-all duration-300 text-left group flex flex-col h-full hover:-translate-y-1">
+                            <svg class="absolute inset-0 w-full h-full pointer-events-none transition-transform duration-700 group-hover:scale-110 opacity-[0.06] group-hover:opacity-[0.15]" xmlns="http://www.w3.org/2000/svg">
+                                <g fill="#8b5cf6" font-family="'Nunito', sans-serif" font-size="28" font-weight="bold">
+                                    <text x="10%" y="30%" transform="rotate(-10)">-4x²y</text>
+                                    <text x="55%" y="25%" transform="rotate(15)">Grado 3</text>
+                                    <text x="15%" y="80%" transform="rotate(5)">Coef: -4</text>
+                                    <text x="65%" y="75%" transform="rotate(-15)">5ab</text>
+                                </g>
+                            </svg>
+                            <div class="relative z-10 flex flex-col h-full w-full">
+                                <div class="bg-purple-100 text-purple-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                                    <i class="fa-solid fa-shapes"></i>
+                                </div>
+                                <h4 class="font-bold text-lg text-dark mb-1">Monomios</h4>
+                                <p class="text-xs text-slate-500 flex-grow font-medium leading-relaxed">Identifica coeficientes, grados y parte literal.</p>
+
+                                <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center w-full">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Progreso</span>
+                                    <span id="cat-monomios-pts" class="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">0/20</span>
+                                </div>
+                            </div>
+                        </button>
+
+                        <!-- Categoría 4 (Extra) -->
+                        <button onclick="startQuiz('Extra: Reducción')" class="relative overflow-hidden bg-slate-50 p-6 rounded-2xl shadow-sm hover:shadow-lg border-2 border-slate-200 hover:border-slate-500 transition-all duration-300 text-left group flex flex-col h-full hover:-translate-y-1">
+                            <svg class="absolute inset-0 w-full h-full pointer-events-none transition-transform duration-700 group-hover:scale-110 opacity-[0.06] group-hover:opacity-[0.15]" xmlns="http://www.w3.org/2000/svg">
+                                <g fill="#64748b" font-family="'Nunito', sans-serif" font-size="26" font-weight="bold">
+                                    <text x="5%" y="35%" transform="rotate(5)">2x + 3x = 5x</text>
+                                    <text x="10%" y="75%" transform="rotate(-10)">7y - y = 6y</text>
+                                    <text x="50%" y="85%" transform="rotate(15)">-a - a = -2a</text>
+                                </g>
+                            </svg>
+                            <div class="relative z-10 flex flex-col h-full w-full">
+                                <div class="bg-slate-200 text-slate-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                                    <i class="fa-solid fa-plus-minus"></i>
+                                </div>
+                                <h4 class="font-bold text-lg text-dark mb-1">Reducción</h4>
+                                <p class="text-xs text-slate-500 flex-grow font-medium leading-relaxed">Agilidad: sumas y restas de monomios semejantes.</p>
+
+                                <div class="mt-4 pt-4 border-t border-slate-200 flex justify-between items-center w-full">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Modo Libre</span>
+                                    <span class="text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2.5 py-1 rounded-lg uppercase">Opcional</span>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Analíticas -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="col-span-1 md:col-span-2 bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100">
+                        <h3 class="text-lg font-bold mb-6 flex items-center gap-2 text-dark">
+                            <span class="text-primary"><i class="fa-solid fa-chart-line"></i></span>
+                            Puntos por partida
+                        </h3>
+                        <div class="relative h-56 w-full">
+                            <canvas id="progressChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center">
+                        <h3 class="text-lg font-bold mb-6 flex items-center justify-center gap-2 text-dark">
+                            <i class="fa-solid fa-trophy text-yellow-500 text-xl"></i> Récords Totales
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <div class="bg-slate-50 p-4 rounded-xl flex justify-between items-center border border-slate-100">
+                                <span class="text-slate-600 font-semibold text-sm">Ejercicios</span>
+                                <span id="stat-total" class="font-black text-xl text-dark">0</span>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-xl flex justify-between items-center border border-green-100">
+                                <span class="text-green-700 font-semibold text-sm">Aciertos</span>
+                                <span id="stat-correct" class="font-black text-xl text-green-700">0</span>
+                            </div>
+                            <div class="bg-indigo-50 p-4 rounded-xl flex justify-between items-center border border-indigo-100">
+                                <span class="text-indigo-700 font-semibold text-sm">Precisión</span>
+                                <span id="stat-accuracy" class="font-black text-xl text-indigo-700">0%</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Botón Diploma -->
+                        <button id="view-diploma-btn" onclick="showDiploma()" class="hidden w-full mt-4 btn-3d bg-yellow-400 border-yellow-600 text-yellow-900 px-4 py-3.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-certificate"></i> Ver Diploma
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vista: Quiz (Preguntas) -->
+            <div id="quiz-view" class="hidden fade-in max-w-2xl mx-auto mt-4">
+                <!-- Barra superior -->
+                <div class="mb-6 flex justify-between items-center">
+                    <button onclick="showDashboard()" class="text-slate-500 hover:text-slate-800 transition flex items-center gap-2 text-sm font-bold bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200">
+                        <i class="fa-solid fa-arrow-left"></i> Volver
+                    </button>
+                    <div class="bg-white px-4 py-2 rounded-full text-sm font-bold text-primary shadow-sm border border-indigo-100 flex items-center gap-2">
+                        <i class="fa-solid fa-bolt text-yellow-500"></i> <span id="q-current">1</span> / <span id="q-total">10</span>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Principal de Pregunta -->
+                <div id="quiz-card" class="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden relative">
+                    <!-- Progress Bar Superior -->
+                    <div class="absolute top-0 left-0 w-full h-1.5 bg-slate-100">
+                        <div id="quiz-progress-bar" class="h-full bg-gradient-to-r from-primary to-blue-400 transition-all duration-500 ease-out" style="width: 0%"></div>
+                    </div>
+
+                    <div class="bg-slate-50/50 border-b border-slate-100 p-8 text-center relative overflow-hidden">
+                        <span id="q-category" class="relative z-10 text-[11px] font-black uppercase tracking-widest text-primary mb-3 block opacity-90">Categoría</span>
+                        <h2 id="q-text" class="relative z-10 text-2xl sm:text-3xl font-extrabold text-dark leading-snug tracking-tight">Pregunta aquí</h2>
+                    </div>
+                    
+                    <div class="p-6 sm:p-8">
+                        <div id="options-container" class="space-y-3">
+                            <!-- Opciones generadas por JS -->
+                        </div>
+                        
+                        <!-- Feedback Box -->
+                        <div id="feedback-container" class="hidden mt-6 p-5 rounded-xl border-2 transition-all">
+                            <div class="flex items-start gap-3">
+                                <div id="feedback-icon" class="mt-0.5"></div>
+                                <div class="flex-1">
+                                    <h4 id="feedback-title" class="font-bold text-lg mb-1"></h4>
+                                    <p id="feedback-text" class="text-slate-700 text-sm leading-relaxed font-medium"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Botón siguiente -->
+                    <div class="bg-slate-50 border-t border-slate-100 p-5 px-8 flex justify-end">
+                        <button id="next-btn" onclick="nextQuestion()" class="hidden btn-3d bg-dark border-slate-900 text-white px-8 py-3 rounded-xl font-bold transition flex items-center">
+                            Siguiente Ejercicio <i class="fa-solid fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vista: Diploma Colorido -->
+            <div id="diploma-view" class="hidden fade-in max-w-4xl mx-auto mt-4 relative">
+                <div class="diploma-bg border-[10px] border-double border-yellow-500 p-10 sm:p-16 rounded-2xl shadow-2xl text-center relative overflow-hidden" id="diploma-canvas-area">
+                    
+                    <!-- Filigranas -->
+                    <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style="background-image: repeating-linear-gradient(45deg, #d97706 0, #d97706 1px, transparent 0, transparent 50%); background-size: 15px 15px;"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full text-white shadow-lg mb-6 border-4 border-white">
+                            <i class="fa-solid fa-award text-5xl"></i>
+                        </div>
+                        
+                        <h1 class="text-3xl sm:text-4xl font-black text-yellow-900 tracking-widest mb-2 uppercase drop-shadow-sm font-serif">Certificado de Excelencia</h1>
+                        <p class="text-lg sm:text-xl text-yellow-700 font-semibold mb-8 italic">Se otorga el presente reconocimiento académico a:</p>
+                        
+                        <h2 id="diploma-name" class="text-5xl sm:text-6xl font-black text-primary mb-8 capitalize drop-shadow-md" style="font-family: 'Comic Sans MS', cursive;">Alias</h2>
+                        
+                        <p class="text-base sm:text-lg text-slate-800 mb-8 max-w-2xl mx-auto font-medium leading-relaxed">
+                            Por haber superado con dedicación los desafíos y dominar a la perfección el Lenguaje Algebraico, Valor Numérico y Monomios.
+                        </p>
+                        
+                        <div class="inline-block bg-white text-green-600 px-6 py-3 rounded-full text-xl font-black border-4 border-green-400 mb-4 shadow-md transform -rotate-2">
+                            <i class="fa-solid fa-check-double mr-2"></i> ¡100% PREPARADO!
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Controles -->
+                <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+                    <button onclick="hideDiploma()" class="btn-3d bg-slate-800 border-slate-900 text-white px-8 py-3.5 rounded-xl font-bold transition flex items-center justify-center gap-2 order-2 sm:order-1">
+                        <i class="fa-solid fa-arrow-left"></i> Volver al panel
+                    </button>
+                    
+                    <button id="download-btn" onclick="downloadDiploma()" class="btn-3d bg-primary border-indigo-700 text-white px-8 py-3.5 rounded-xl font-bold transition flex items-center justify-center gap-2 order-1 sm:order-2">
+                        <i class="fa-solid fa-download"></i> Guardar Imagen
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Variables globales
+        let studentId = null;
+        let chartInitialized = false;
+
+        // --- BASE DE DATOS DE PREGUNTAS ---
+        const allQuestions = [
+            // ================= LENGUAJE ALGEBRAICO (30) =================
+            { category: "Lenguaje Algebraico", q: "Un número desconocido", options: ["1", "x", "n + 1", "0"], ans: 1, exp: "Usamos letras como 'x' para representar valores desconocidos." },
+            { category: "Lenguaje Algebraico", q: "El doble de un número", options: ["x + 2", "x²", "2x", "x / 2"], ans: 2, exp: "El 'doble' significa multiplicar por 2." },
+            { category: "Lenguaje Algebraico", q: "La mitad de un número", options: ["x - 2", "2x", "x²", "x / 2"], ans: 3, exp: "La 'mitad' se obtiene dividiendo entre 2." },
+            { category: "Lenguaje Algebraico", q: "El doble de un número más su tercera parte", options: ["2x + 3", "2x + x/3", "x² + 3x", "2 + x/3"], ans: 1, exp: "Doble (2x) sumado (+) a su tercera parte (x/3)." },
+            { category: "Lenguaje Algebraico", q: "La suma de tres números consecutivos", options: ["x + y + z", "x + 2x + 3x", "x + (x+1) + (x+2)", "3x"], ans: 2, exp: "Si el primer número es x, el consecutivo es x+1 y el siguiente x+2." },
+            { category: "Lenguaje Algebraico", q: "El cuadrado de un número", options: ["2x", "x²", "x / 2", "x + x"], ans: 1, exp: "Multiplicar un número por sí mismo es elevarlo al cuadrado (x²)." },
+            { category: "Lenguaje Algebraico", q: "Ana es cinco años más joven que Arturo (Arturo = x)", options: ["x + 5", "5x", "x - 5", "5 - x"], ans: 2, exp: "A la edad de Arturo (x) hay que restarle 5 años." },
+            { category: "Lenguaje Algebraico", q: "El triple de un número menos cinco", options: ["3x - 5", "x/3 - 5", "3(x - 5)", "x - 5"], ans: 0, exp: "El triple de un número es 3x, y le restamos 5 (3x - 5)." },
+            { category: "Lenguaje Algebraico", q: "El consecutivo de un número", options: ["2x", "x + 1", "x - 1", "x + y"], ans: 1, exp: "El número consecutivo siempre se obtiene sumando 1 al número (x)." },
+            { category: "Lenguaje Algebraico", q: "Un número aumentado en 10", options: ["10x", "x - 10", "x + 10", "x¹⁰"], ans: 2, exp: "La palabra 'aumentado' se traduce como una suma (+)." },
+            { category: "Lenguaje Algebraico", q: "El doble de la suma de dos números", options: ["2(x + y)", "2x + y", "x² + y²", "2 + x + y"], ans: 0, exp: "Primero se hace la suma (x + y), y a ese resultado se le hace el doble multiplicando por 2." },
+            { category: "Lenguaje Algebraico", q: "La diferencia entre un número y su mitad", options: ["x - 2", "x/2 - x", "2x - x", "x - x/2"], ans: 3, exp: "'Diferencia' es resta. Un número (x) menos su mitad (x/2)." },
+            { category: "Lenguaje Algebraico", q: "El anterior de un número", options: ["x + 1", "x - 1", "-x", "x/2"], ans: 1, exp: "El número anterior a 'x' se obtiene restando 1." },
+            { category: "Lenguaje Algebraico", q: "El producto de dos números distintos", options: ["x + y", "x/y", "x - y", "xy"], ans: 3, exp: "El 'producto' es el resultado de una multiplicación." },
+            { category: "Lenguaje Algebraico", q: "El cociente de dos números", options: ["x + y", "x/y", "xy", "x - y"], ans: 1, exp: "El 'cociente' es el resultado de una división, se suele escribir como fracción." },
+            { category: "Lenguaje Algebraico", q: "El cubo de un número", options: ["3x", "x/3", "x³", "x + 3"], ans: 2, exp: "Elevar al cubo significa poner el número como base con un exponente de 3." },
+            { category: "Lenguaje Algebraico", q: "La suma de los cuadrados de dos números", options: ["(x + y)²", "x² + y²", "2x + 2y", "x²y²"], ans: 1, exp: "Primero se elevan al cuadrado (x², y²) y luego se suman." },
+            { category: "Lenguaje Algebraico", q: "El cuadrado de la suma de dos números", options: ["x² + y²", "2(x + y)", "(x + y)²", "x² + y"], ans: 2, exp: "Primero se suman los números (x + y) y todo se eleva al cuadrado." },
+            { category: "Lenguaje Algebraico", q: "Un número par", options: ["x", "x + 2", "2x", "2x + 1"], ans: 2, exp: "Cualquier número multiplicado por 2 siempre dará un resultado par." },
+            { category: "Lenguaje Algebraico", q: "Un número impar", options: ["3x", "2x - 2", "x + 1", "2x + 1"], ans: 3, exp: "A un número par (2x) le sumas 1 y siempre será impar." },
+            { category: "Lenguaje Algebraico", q: "El 20% de un número", options: ["x/20", "20x", "0.20x", "x - 20"], ans: 2, exp: "El 20% es equivalente a multiplicar el número por 20/100 o 0.20." },
+            { category: "Lenguaje Algebraico", q: "La suma de un número y su cuadrado", options: ["2x", "x + x²", "(x+x)²", "x³"], ans: 1, exp: "Sumamos el número 'x' más ese mismo número elevado al cuadrado 'x²'." },
+            { category: "Lenguaje Algebraico", q: "El doble de un número menos su cubo", options: ["2x - x³", "(2x)³", "x² - 3x", "2(x - x³)"], ans: 0, exp: "Doble del número (2x) menos (-) su cubo (x³)." },
+            { category: "Lenguaje Algebraico", q: "Un número disminuido en 8", options: ["8 - x", "x/8", "8x", "x - 8"], ans: 3, exp: "'Disminuido' significa restar esa cantidad al número." },
+            { category: "Lenguaje Algebraico", q: "El triple de un número más el doble de otro", options: ["5xy", "3x + 2y", "3(x + y)", "x³ + y²"], ans: 1, exp: "Triple del primero (3x) sumado (+) al doble del segundo (2y)." },
+            { category: "Lenguaje Algebraico", q: "La edad de Luis hace 5 años (edad actual = x)", options: ["x + 5", "5 - x", "x/5", "x - 5"], ans: 3, exp: "Para calcular una edad en el pasado, restamos años a la edad actual." },
+            { category: "Lenguaje Algebraico", q: "La edad de María dentro de 10 años (edad actual = x)", options: ["10x", "x - 10", "x + 10", "x/10"], ans: 2, exp: "Para calcular una edad en el futuro, sumamos años a la edad actual." },
+            { category: "Lenguaje Algebraico", q: "El perímetro de un cuadrado de lado x", options: ["x²", "4x", "x + 4", "x/4"], ans: 1, exp: "El perímetro es la suma de los 4 lados iguales (x+x+x+x = 4x)." },
+            { category: "Lenguaje Algebraico", q: "El área de un rectángulo de base 'x' y altura 'y'", options: ["x + y", "2x + 2y", "x/y", "xy"], ans: 3, exp: "El área del rectángulo es base por altura (x multiplicado por y)." },
+            { category: "Lenguaje Algebraico", q: "La tercera parte del cubo de un número", options: ["(x/3)³", "3x³", "x³/3", "x/3 + 3"], ans: 2, exp: "Primero se hace el cubo (x³) y luego se divide entre 3." },
+
+            // ================= VALOR NUMÉRICO (30) =================
+            { category: "Valor Numérico", q: "Halla el valor de: 3x - 5 cuando x = 0", options: ["-5", "5", "0", "-2"], ans: 0, exp: "Sustituyendo: 3(0) - 5 = 0 - 5 = -5" },
+            { category: "Valor Numérico", q: "Halla el valor de: 3x - 2 cuando x = 2", options: ["1", "4", "6", "-2"], ans: 1, exp: "Sustituyendo: 3(2) - 2 = 6 - 2 = 4" },
+            { category: "Valor Numérico", q: "Halla el valor de: x² + 1 cuando x = -1", options: ["0", "-1", "2", "1"], ans: 2, exp: "Sustituyendo: (-1)² + 1 = 1 + 1 = 2 (Un negativo al cuadrado se vuelve positivo)" },
+            { category: "Valor Numérico", q: "Halla el valor de: 5a - 2b para a=0, b=1", options: ["3", "-2", "0", "2"], ans: 1, exp: "Sustituyendo: 5(0) - 2(1) = 0 - 2 = -2" },
+            { category: "Valor Numérico", q: "Halla el valor de: (a + b)² para a=0, b=1", options: ["2", "0", "1", "4"], ans: 2, exp: "Sustituyendo: (0 + 1)² = 1² = 1" },
+            { category: "Valor Numérico", q: "Halla el valor de: 2x + 4 cuando x = 3", options: ["10", "14", "23", "6"], ans: 0, exp: "Sustituyendo: 2(3) + 4 = 6 + 4 = 10" },
+            { category: "Valor Numérico", q: "Halla el valor de: x² - 3 cuando x = 2", options: ["-1", "1", "4", "7"], ans: 1, exp: "Sustituyendo: (2)² - 3 = 4 - 3 = 1" },
+            { category: "Valor Numérico", q: "Halla el valor de: -x + 5 cuando x = -2", options: ["3", "-7", "7", "-3"], ans: 2, exp: "Sustituyendo: -(-2) + 5 = 2 + 5 = 7" },
+            { category: "Valor Numérico", q: "Halla el valor de: 4a - 3b para a=2, b=2", options: ["14", "2", "-2", "4"], ans: 1, exp: "Sustituyendo: 4(2) - 3(2) = 8 - 6 = 2" },
+            { category: "Valor Numérico", q: "Halla el valor de: x(x + 2) cuando x = 4", options: ["16", "24", "8", "6"], ans: 1, exp: "Sustituyendo primero el paréntesis: 4(4 + 2) = 4(6) = 24" },
+            { category: "Valor Numérico", q: "Halla el valor de: x² + 2x + 1 para x = 2", options: ["7", "8", "9", "10"], ans: 2, exp: "Sustituyendo: 2² + 2(2) + 1 = 4 + 4 + 1 = 9" },
+            { category: "Valor Numérico", q: "Halla el valor de: 3x² - 2x para x = -1", options: ["1", "5", "4", "-5"], ans: 1, exp: "Sustituyendo: 3(-1)² - 2(-1) = 3(1) + 2 = 5" },
+            { category: "Valor Numérico", q: "Halla el valor de: a² - b² para a = 3, b = 2", options: ["1", "13", "5", "6"], ans: 2, exp: "Sustituyendo: 3² - 2² = 9 - 4 = 5" },
+            { category: "Valor Numérico", q: "Halla el valor de: (x+2)(x-2) para x = 4", options: ["8", "12", "16", "20"], ans: 1, exp: "Sustituyendo: (4+2)(4-2) = (6)(2) = 12" },
+            { category: "Valor Numérico", q: "Halla el valor de: 5x - 3y + 2 para x = 1, y = -1", options: ["4", "10", "0", "8"], ans: 1, exp: "Sustituyendo: 5(1) - 3(-1) + 2 = 5 + 3 + 2 = 10" },
+            { category: "Valor Numérico", q: "Halla el valor de: x³ - 1 para x = 2", options: ["5", "7", "8", "3"], ans: 1, exp: "Sustituyendo: 2³ - 1 = 8 - 1 = 7" },
+            { category: "Valor Numérico", q: "Halla el valor de: -2x² + 5 para x = 3", options: ["-13", "-1", "23", "11"], ans: 0, exp: "Primero el cuadrado: -2(3²) + 5 = -2(9) + 5 = -18 + 5 = -13" },
+            { category: "Valor Numérico", q: "Halla el valor de: x/2 + y/3 para x = 4, y = 6", options: ["2", "4", "5", "10"], ans: 1, exp: "Sustituyendo: 4/2 + 6/3 = 2 + 2 = 4" },
+            { category: "Valor Numérico", q: "Halla el valor de: 10 - 3x para x = 5", options: ["-5", "5", "25", "15"], ans: 0, exp: "Sustituyendo: 10 - 3(5) = 10 - 15 = -5" },
+            { category: "Valor Numérico", q: "Halla el valor de: x(y - 1) para x = 2, y = 5", options: ["8", "10", "12", "6"], ans: 0, exp: "Sustituyendo: 2(5 - 1) = 2(4) = 8" },
+            { category: "Valor Numérico", q: "Halla el valor de: a² + ab + b² para a = 1, b = 2", options: ["3", "5", "7", "9"], ans: 2, exp: "Sustituyendo: 1² + (1)(2) + 2² = 1 + 2 + 4 = 7" },
+            { category: "Valor Numérico", q: "Halla el valor de: 2(x - y)² para x = 3, y = 1", options: ["4", "8", "16", "2"], ans: 1, exp: "Sustituyendo: 2(3 - 1)² = 2(2)² = 2(4) = 8" },
+            { category: "Valor Numérico", q: "Halla el valor de: x² + y² para x = -2, y = -3", options: ["-13", "1", "5", "13"], ans: 3, exp: "Cuadrados de negativos son positivos: (-2)² + (-3)² = 4 + 9 = 13" },
+            { category: "Valor Numérico", q: "Halla el valor de: x³ + x² + x para x = -1", options: ["-1", "1", "3", "-3"], ans: 0, exp: "Sustituyendo: (-1)³ + (-1)² + (-1) = -1 + 1 - 1 = -1" },
+            { category: "Valor Numérico", q: "Halla el valor de: 4x / y para x = 3, y = 2", options: ["6", "12", "5", "2"], ans: 0, exp: "Sustituyendo: 4(3) / 2 = 12 / 2 = 6" },
+            { category: "Valor Numérico", q: "Halla el valor de: -x³ para x = -2", options: ["8", "-8", "16", "-16"], ans: 0, exp: "Sustituyendo: -(-2)³ = -(-8) = 8" },
+            { category: "Valor Numérico", q: "Halla el valor de: 3x - 2y + z para x=1, y=2, z=3", options: ["1", "2", "3", "0"], ans: 1, exp: "Sustituyendo: 3(1) - 2(2) + 3 = 3 - 4 + 3 = 2" },
+            { category: "Valor Numérico", q: "Halla el valor de: (a+b)/(a-b) para a = 5, b = 3", options: ["8", "4", "2", "15"], ans: 1, exp: "Sustituyendo: (5+3) / (5-3) = 8 / 2 = 4" },
+            { category: "Valor Numérico", q: "Halla el valor de: 2x²y para x = 2, y = 3", options: ["12", "24", "48", "36"], ans: 1, exp: "Sustituyendo: 2(2)²(3) = 2(4)(3) = 8(3) = 24" },
+            { category: "Valor Numérico", q: "Halla el valor de: x² - 4x + 4 para x = 2", options: ["4", "8", "0", "-4"], ans: 2, exp: "Sustituyendo: 2² - 4(2) + 4 = 4 - 8 + 4 = 0" },
+
+            // ================= MONOMIOS (SOLO COEFICIENTE, GRADO Y PARTE LITERAL) (30) =================
+            { category: "Monomios", q: "¿Cuál es el coeficiente de -5ab?", options: ["ab", "5", "-5", "-5ab"], ans: 2, exp: "El coeficiente es el número que acompaña a las letras, con su signo." },
+            { category: "Monomios", q: "¿Cuál es la parte literal de 4xyz?", options: ["4", "xyz", "4xyz", "x,y,z"], ans: 1, exp: "La parte literal son las letras y sus exponentes." },
+            { category: "Monomios", q: "¿Cuál es el coeficiente de x³?", options: ["3", "x", "0", "1"], ans: 3, exp: "Si no hay número delante de la letra, se sobreentiende un 1 (1 · x³ = x³)." },
+            { category: "Monomios", q: "¿Cuál es el grado de -4x²y?", options: ["2", "3", "4", "-4"], ans: 1, exp: "Se suman los exponentes: el 2 de la x y el 1 de la y. (2+1=3)" },
+            { category: "Monomios", q: "¿Cuál es el grado de 2x?", options: ["0", "1", "2", "x"], ans: 1, exp: "La 'x' no tiene exponente escrito, por lo que equivale a x¹." },
+            { category: "Monomios", q: "¿Cuál es la parte literal de -7a²b?", options: ["-7", "7", "ab", "a²b"], ans: 3, exp: "La parte literal debe incluir también los exponentes de las letras." },
+            { category: "Monomios", q: "¿Cuál es el grado de 5x³y²?", options: ["5", "6", "3", "2"], ans: 0, exp: "Sumamos los exponentes: 3 (de la x) + 2 (de la y) = 5." },
+            { category: "Monomios", q: "¿Cuál es el grado de 7x⁴y³?", options: ["4", "3", "7", "12"], ans: 2, exp: "Suma de exponentes de la parte literal: 4 + 3 = 7." },
+            { category: "Monomios", q: "¿Cuál es el coeficiente de -x?", options: ["1", "-1", "0", "x"], ans: 1, exp: "El signo menos delante de una letra equivale a tener un coeficiente de -1." },
+            { category: "Monomios", q: "¿Cuál es el grado de -8a²b³c?", options: ["5", "6", "8", "2"], ans: 1, exp: "Sumamos los exponentes: 2 (de la a) + 3 (de la b) + 1 (de la c) = 6." },
+            { category: "Monomios", q: "¿Cuál es la parte literal de -12x³yz²?", options: ["-12", "x³y", "xyz", "x³yz²"], ans: 3, exp: "La parte literal son todas las variables (letras) con todos sus exponentes." },
+            { category: "Monomios", q: "¿Cuál es el coeficiente de xyz?", options: ["0", "1", "3", "x"], ans: 1, exp: "Si no hay número visible delante, el coeficiente es un 1 invisible." },
+            { category: "Monomios", q: "¿Cuál es el grado del monomio 5?", options: ["0", "1", "5", "No tiene"], ans: 0, exp: "Un número suelto sin parte literal se considera un monomio de grado cero." },
+            { category: "Monomios", q: "¿Cuál es la parte literal del número 9?", options: ["9", "x", "No tiene", "1"], ans: 2, exp: "Los números solos son términos independientes, no tienen letras." },
+            { category: "Monomios", q: "¿Cuál es el coeficiente de 14xy²?", options: ["xy²", "14", "1", "2"], ans: 1, exp: "El número grande que multiplica las letras es el 14." },
+            { category: "Monomios", q: "¿Cuál es la parte literal de -2a?", options: ["-2", "a", "-a", "No tiene"], ans: 1, exp: "La única letra de este monomio es la 'a'." },
+            { category: "Monomios", q: "¿Cuál es el coeficiente de -y?", options: ["y", "-1", "1", "0"], ans: 1, exp: "El guion negativo sin número equivale a un -1 multiplicando." },
+            { category: "Monomios", q: "¿Cuál es el grado de 4a²b²?", options: ["2", "8", "4", "16"], ans: 2, exp: "Suma de los exponentes 2 y 2 = 4." },
+            { category: "Monomios", q: "¿Cuál es la parte literal de 8x⁵?", options: ["8", "x", "x⁵", "5"], ans: 2, exp: "Toda la variable con su exponente forma la parte literal." },
+            { category: "Monomios", q: "¿Cuál es el coeficiente de x²y / 2?", options: ["2", "x²y", "1/2", "0.2"], ans: 2, exp: "Dividir entre 2 es lo mismo que multiplicar todo por un medio (1/2)." },
+            { category: "Monomios", q: "¿Cuál es el grado de 10x³y⁴z?", options: ["7", "8", "10", "3"], ans: 1, exp: "Sumamos: 3 (de x) + 4 (de y) + 1 (de z) = 8." },
+            { category: "Monomios", q: "¿Cuál es la parte literal de -m²n?", options: ["-m²", "n", "-1", "m²n"], ans: 3, exp: "El signo menos pertenece al coeficiente, las letras solas a la parte literal." },
+            { category: "Monomios", q: "¿Cuál es el coeficiente de (-3/4)x?", options: ["-3", "4", "-3/4", "x"], ans: 2, exp: "El coeficiente puede ser una fracción perfectamente." },
+            { category: "Monomios", q: "¿Cuál es el grado de -6abc?", options: ["1", "3", "-6", "0"], ans: 1, exp: "Las tres letras (a, b y c) tienen exponente 1. 1+1+1=3." },
+            { category: "Monomios", q: "¿Cuál es la parte literal de 0.5x²?", options: ["0.5", "x", "x²", "5x"], ans: 2, exp: "Aislamos los números y nos quedamos con x²." },
+            { category: "Monomios", q: "¿Cuál es el coeficiente de 100x?", options: ["x", "100", "0", "1"], ans: 1, exp: "El valor numérico que multiplica a la 'x' es 100." },
+            { category: "Monomios", q: "¿Cuál es el grado de a³b³c³?", options: ["3", "6", "9", "27"], ans: 2, exp: "Sumamos los tres exponentes de grado tres: 3 + 3 + 3 = 9." },
+            { category: "Monomios", q: "¿Cuál es la parte literal de -xyz²?", options: ["-1", "xyz", "z²", "xyz²"], ans: 3, exp: "Toda la cadena de variables forma la parte literal del monomio." },
+            { category: "Monomios", q: "¿Cuál es el coeficiente de (3/5)a²?", options: ["a²", "3/5", "3", "5"], ans: 1, exp: "La fracción completa es el coeficiente." },
+            { category: "Monomios", q: "¿Qué grado tiene el monomio 2/3?", options: ["2", "3", "1", "0"], ans: 3, exp: "Al ser un número sin variables, su grado es 0." },
+
+            // ================= EXTRA: REDUCCIÓN DE MONOMIOS (OPCIONAL) =================
+            { category: "Extra: Reducción", q: "¿Qué monomio es semejante a 3x²?", options: ["-5x²", "3x³", "3xy", "x"], ans: 0, exp: "Dos monomios son semejantes si tienen exactamente la misma parte literal (x²)." },
+            { category: "Extra: Reducción", q: "Suma los monomios: 2x + 5x", options: ["7x²", "10x", "7x", "10x²"], ans: 2, exp: "Como son semejantes, sumamos los coeficientes y mantenemos la parte literal: (2+5)x = 7x." },
+            { category: "Extra: Reducción", q: "Resta los monomios: 8y - 3y", options: ["5y", "11y", "5y²", "24y"], ans: 0, exp: "Como son semejantes, restamos los coeficientes: (8-3)y = 5y." },
+            { category: "Extra: Reducción", q: "Suma los monomios: 3x²y + 5x²y", options: ["8x⁴y²", "15x²y", "8x²y", "No se puede"], ans: 2, exp: "Como tienen la misma parte literal (x²y), se suman sus coeficientes: 3+5=8." },
+            { category: "Extra: Reducción", q: "Resta los monomios: 10ab - 12ab", options: ["2ab", "-2ab", "-2a²b²", "22ab"], ans: 1, exp: "Son semejantes, restamos coeficientes: 10 - 12 = -2." },
+            { category: "Extra: Reducción", q: "¿Qué monomio hay que sumar a 5x para obtener 12x?", options: ["17x", "7x²", "7", "7x"], ans: 3, exp: "Si a 5x le sumas 7x, obtienes 12x (porque 5 + 7 = 12)." },
+            { category: "Extra: Reducción", q: "Suma: x + x + x", options: ["x³", "3x", "3x³", "x"], ans: 1, exp: "Tienen coeficiente 1. Sumamos 1+1+1 = 3x." },
+            { category: "Extra: Reducción", q: "¿Son semejantes los monomios 4xy y -2yx?", options: ["Sí", "No", "Solo en coeficiente", "Solo si x=y"], ans: 0, exp: "Sí lo son. El orden de los factores no altera el producto (xy es igual a yx)." },
+            { category: "Extra: Reducción", q: "Reduce la expresión: 3x - 5x + 8x", options: ["6x", "16x", "0", "6x³"], ans: 0, exp: "Agrupando coeficientes: 3 - 5 + 8 = 6. Por tanto, 6x." },
+            { category: "Extra: Reducción", q: "Suma: 4a + 3a", options: ["7a", "12a", "7a²", "a"], ans: 0, exp: "4 + 3 = 7, mantenemos la 'a'." },
+            { category: "Extra: Reducción", q: "Resta: 10x² - 4x²", options: ["6x", "6x⁴", "6x²", "14x²"], ans: 2, exp: "Restamos los coeficientes: 10 - 4 = 6. La parte literal no cambia." },
+            { category: "Extra: Reducción", q: "Reduce: x + 2x + 3x", options: ["6x³", "5x", "6x", "x⁶"], ans: 2, exp: "Sumamos 1 + 2 + 3 = 6." },
+            { category: "Extra: Reducción", q: "Reduce: 5y - 2y + y", options: ["4y", "2y", "3y", "4y²"], ans: 0, exp: "5 - 2 + 1 = 4." },
+            { category: "Extra: Reducción", q: "Suma: -3x + 8x", options: ["-11x", "5x", "-5x", "11x"], ans: 1, exp: "-3 + 8 es igual a 5 positivo." },
+            { category: "Extra: Reducción", q: "Resta: -2a - 5a", options: ["-7a", "3a", "-3a", "7a"], ans: 0, exp: "Al restar a un negativo, se vuelve más negativo: -2 - 5 = -7." },
+            { category: "Extra: Reducción", q: "Reduce: 4xy - xy", options: ["4", "3xy", "5xy", "3x²y²"], ans: 1, exp: "Recuerda que 'xy' tiene un 1 invisible delante: 4 - 1 = 3." },
+            { category: "Extra: Reducción", q: "Suma: 7x³ + x³", options: ["7x⁶", "8x³", "7x³", "8x⁶"], ans: 1, exp: "7 + 1 = 8." },
+            { category: "Extra: Reducción", q: "Reduce: 10m - 15m", options: ["5m", "-5m", "25m", "0"], ans: 1, exp: "A 10 le quitamos 15, nos da -5." },
+            { category: "Extra: Reducción", q: "Reduce: x² + x² + x²", options: ["x⁶", "3x²", "x²", "3x⁶"], ans: 1, exp: "Tenemos tres veces el mismo monomio: 1 + 1 + 1 = 3." },
+            { category: "Extra: Reducción", q: "Reduce: 12z - 12z", options: ["z", "1", "0", "24z"], ans: 2, exp: "Al restar una cantidad por sí misma, el resultado siempre es 0." },
+            { category: "Extra: Reducción", q: "Suma: 6ab² + 2ab²", options: ["8a²b⁴", "4ab²", "8ab²", "12ab²"], ans: 2, exp: "6 + 2 = 8, y la parte literal se queda igual." },
+            { category: "Extra: Reducción", q: "Reduce: -x - x", options: ["0", "-2x", "2x", "x²"], ans: 1, exp: "-1 - 1 = -2." },
+            { category: "Extra: Reducción", q: "Reduce: 5x - 8x + x", options: ["-2x", "2x", "-4x", "14x"], ans: 0, exp: "De izquierda a derecha: 5 - 8 = -3. Luego -3 + 1 = -2." },
+            { category: "Extra: Reducción", q: "Resta: 2y² - 6y²", options: ["4y²", "-4y²", "-8y²", "12y²"], ans: 1, exp: "2 - 6 = -4." },
+            { category: "Extra: Reducción", q: "Reduce: a + 4a - 2a", options: ["3a", "7a", "2a", "5a"], ans: 0, exp: "1 + 4 = 5. Luego 5 - 2 = 3." },
+            { category: "Extra: Reducción", q: "Reduce: 15xy - 5xy + 2xy", options: ["8xy", "12xy", "22xy", "10xy"], ans: 1, exp: "15 - 5 = 10. Luego 10 + 2 = 12." },
+            { category: "Extra: Reducción", q: "¿Qué monomio restar a 10x para tener 3x?", options: ["13x", "-7x", "7x", "7"], ans: 2, exp: "10x - 7x = 3x." },
+            { category: "Extra: Reducción", q: "Reduce: -5m² + 5m²", options: ["-10m²", "10m²", "m²", "0"], ans: 3, exp: "Al sumar un número y su opuesto, da cero." },
+            { category: "Extra: Reducción", q: "Suma: 3abc + 4abc", options: ["7a²b²c²", "7abc", "12abc", "abc"], ans: 1, exp: "3 + 4 = 7." },
+            { category: "Extra: Reducción", q: "Reduce: 9x - x", options: ["9", "8x", "10x", "8"], ans: 1, exp: "9 - 1 = 8." }
+        ];
+
+        // --- ESTADO DE LA APLICACIÓN ---
+        let state = {
+            points: 0,
+            categoryPoints: { 
+                'Lenguaje Algebraico': 0,
+                'Valor Numérico': 0,
+                'Monomios': 0,
+                'Extra: Reducción': 0
+            },
+            totalAnswered: 0,
+            correctAnswers: 0,
+            history: [],
+            currentQuiz: [],
+            currentQuestionIndex: 0,
+            hasAnsweredCurrent: false,
+            alias: '',
+            diplomaEarned: false,
+            diplomaShown: false
+        };
+
+        // --- FUNCIONES DE ALMACENAMIENTO ---
+        function login() {
+            const aliasInput = document.getElementById('student-alias').value.trim();
+            const pinInput = document.getElementById('student-pin').value.trim();
+            const errorEl = document.getElementById('login-error');
+            
+            if (aliasInput.length < 3) {
+                errorEl.textContent = "El alias debe tener al menos 3 letras.";
+                return;
+            }
+            if (pinInput.length !== 4 || isNaN(pinInput)) {
+                errorEl.textContent = "El PIN debe ser de 4 números.";
+                return;
+            }
+            errorEl.textContent = "";
+            
+            const safeAlias = aliasInput.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
+            studentId = `${safeAlias}-${pinInput}`;
+            
+            const savedData = localStorage.getItem('estudioPro_' + studentId);
+            
+            if (savedData) {
+                state = { ...state, ...JSON.parse(savedData) };
+                if (!state.categoryPoints) {
+                    state.categoryPoints = { 'Lenguaje Algebraico': 0, 'Valor Numérico': 0, 'Monomios': 0, 'Extra: Reducción': 0 };
+                }
+                if (state.diplomaEarned === undefined) state.diplomaEarned = false;
+                if (state.diplomaShown === undefined) state.diplomaShown = false;
+            } else {
+                state.history = [0];
+                state.alias = aliasInput; 
+                state.categoryPoints = { 'Lenguaje Algebraico': 0, 'Valor Numérico': 0, 'Monomios': 0, 'Extra: Reducción': 0 };
+                localStorage.setItem('estudioPro_' + studentId, JSON.stringify(state));
+            }
+            
+            const greetingName = state.alias || aliasInput;
+            document.getElementById('greeting-text').textContent = `¡Hola, ${greetingName}! 👋`;
+
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            
+            updateDashboard();
+            initChart(); 
+            updateChart();
+        }
+
+        function saveData() {
+            if (!studentId) return;
+            localStorage.setItem('estudioPro_' + studentId, JSON.stringify(state));
+            updateDashboard();
+            updateChart();
+        }
+
+        // --- LÓGICA DE INTERFAZ ---
+        function updateCategoryProgress(elId, points) {
+            const el = document.getElementById(elId);
+            if(!el) return;
+            
+            el.textContent = `${points}/20`;
+            if(points >= 20) {
+                el.className = 'text-xs font-bold text-green-700 bg-green-100 px-2.5 py-1 rounded-lg flex items-center gap-1';
+                el.innerHTML = '<i class="fa-solid fa-check"></i> Listo';
+            } else {
+                el.className = 'text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg';
+            }
+        }
+
+        function updateDashboard() {
+            document.getElementById('score-display').textContent = `${state.points} pts`;
+
+            document.getElementById('stat-total').textContent = state.totalAnswered;
+            document.getElementById('stat-correct').textContent = state.correctAnswers;
+            
+            const accuracy = state.totalAnswered === 0 ? 0 : Math.round((state.correctAnswers / state.totalAnswered) * 100);
+            document.getElementById('stat-accuracy').textContent = `${accuracy}%`;
+
+            if (!state.categoryPoints) state.categoryPoints = { 'Lenguaje Algebraico': 0, 'Valor Numérico': 0, 'Monomios': 0, 'Extra: Reducción': 0 };
+            
+            updateCategoryProgress('cat-lenguaje-pts', state.categoryPoints['Lenguaje Algebraico']);
+            updateCategoryProgress('cat-valor-pts', state.categoryPoints['Valor Numérico']);
+            updateCategoryProgress('cat-monomios-pts', state.categoryPoints['Monomios']);
+
+            if (state.diplomaEarned) {
+                const btn = document.getElementById('view-diploma-btn');
+                btn.classList.remove('hidden');
+                btn.classList.add('flex');
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('quiz-view').classList.add('hidden');
+            document.getElementById('diploma-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            saveData();
+
+            if (!state.diplomaShown && state.categoryPoints && 
+                state.categoryPoints['Lenguaje Algebraico'] >= 20 &&
+                state.categoryPoints['Valor Numérico'] >= 20 &&
+                state.categoryPoints['Monomios'] >= 20) {
+                
+                state.diplomaEarned = true;
+                state.diplomaShown = true;
+                saveData();
+                showDiploma(); 
+            }
+        }
+
+        function triggerDiplomaConfetti() {
+            var duration = 4000;
+            var end = Date.now() + duration;
+
+            (function frame() {
+                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0, y: 0.8 }, colors: ['#fbbf24', '#f59e0b', '#4f46e5', '#ffffff'] });
+                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1, y: 0.8 }, colors: ['#fbbf24', '#f59e0b', '#4f46e5', '#ffffff'] });
+                if (Date.now() < end) { requestAnimationFrame(frame); }
+            }());
+        }
+
+        function triggerCorrectConfetti() {
+            confetti({ particleCount: 40, spread: 60, origin: { y: 0.7 }, colors: ['#10b981', '#34d399', '#ffffff'], disableForReducedMotion: true });
+        }
+
+        function showDiploma() {
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('quiz-view').classList.add('hidden');
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('diploma-view').classList.remove('hidden');
+            document.getElementById('diploma-name').textContent = state.alias || 'Estudiante';
+            
+            triggerDiplomaConfetti();
+        }
+
+        function hideDiploma() {
+            document.getElementById('diploma-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.remove('hidden');
+        }
+
+        function downloadDiploma() {
+            const diplomaEl = document.getElementById('diploma-canvas-area');
+            const btn = document.getElementById('download-btn');
+            const originalHtml = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
+            btn.disabled = true;
+
+            html2canvas(diplomaEl, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Diploma_Algebra_${state.alias || 'Estudiante'}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }).catch(err => {
+                btn.innerHTML = 'Error';
+                setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 2000);
+            });
+        }
+
+        // --- LÓGICA DEL QUIZ ---
+        function startQuiz(category) {
+            const filteredQuestions = allQuestions.filter(q => q.category === category);
+            state.currentQuiz = [...filteredQuestions].sort(() => 0.5 - Math.random());
+            state.currentQuestionIndex = 0;
+            
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('quiz-view').classList.remove('hidden');
+            
+            document.getElementById('q-total').textContent = state.currentQuiz.length;
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            state.hasAnsweredCurrent = false;
+            const q = state.currentQuiz[state.currentQuestionIndex];
+            
+            document.getElementById('q-current').textContent = state.currentQuestionIndex + 1;
+            document.getElementById('q-category').textContent = q.category;
+            document.getElementById('q-text').textContent = q.q;
+            
+            const progressPercent = ((state.currentQuestionIndex) / state.currentQuiz.length) * 100;
+            document.getElementById('quiz-progress-bar').style.width = `${progressPercent}%`;
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn btn-3d w-full text-left p-4 rounded-xl border-2 border-slate-200 font-bold text-lg bg-white flex items-center shadow-sm';
+                btn.innerHTML = `
+                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-500 mr-4 text-sm font-black transition-colors">
+                        ${String.fromCharCode(65 + index)}
+                    </span> 
+                    <span class="flex-1 text-slate-700">${opt}</span>
+                `;
+                btn.onclick = () => checkAnswer(index, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            document.getElementById('feedback-container').classList.add('hidden');
+            document.getElementById('next-btn').classList.add('hidden');
+        }
+
+        function checkAnswer(selectedIndex, btnElement) {
+            if (state.hasAnsweredCurrent) return;
+            state.hasAnsweredCurrent = true;
+
+            const q = state.currentQuiz[state.currentQuestionIndex];
+            const isCorrect = selectedIndex === q.ans;
+            const buttons = document.querySelectorAll('.option-btn');
+            const quizCard = document.getElementById('quiz-card');
+
+            state.totalAnswered++;
+
+            buttons.forEach((btn, idx) => {
+                btn.disabled = true;
+                const letterBadge = btn.querySelector('span:first-child');
+                
+                if (idx === q.ans) {
+                    btn.classList.add('correct');
+                    btn.classList.remove('border-slate-200');
+                    if(letterBadge) letterBadge.className = "inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/30 text-white mr-4 text-sm font-black";
+                } else if (idx === selectedIndex && !isCorrect) {
+                    btn.classList.add('incorrect');
+                    btn.classList.remove('border-slate-200');
+                    if(letterBadge) letterBadge.className = "inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/30 text-white mr-4 text-sm font-black";
+                } else {
+                    btn.classList.add('opacity-40');
+                }
+            });
+
+            const fbContainer = document.getElementById('feedback-container');
+            const fbIcon = document.getElementById('feedback-icon');
+            const fbTitle = document.getElementById('feedback-title');
+            const fbText = document.getElementById('feedback-text');
+
+            fbContainer.classList.remove('hidden', 'bg-green-50', 'bg-red-50', 'border-green-200', 'border-red-200');
+            
+            if (isCorrect) {
+                state.correctAnswers++;
+                const ptsEarned = 1;
+                state.points += ptsEarned;
+                
+                if (!state.categoryPoints) state.categoryPoints = { 'Lenguaje Algebraico': 0, 'Valor Numérico': 0, 'Monomios': 0, 'Extra: Reducción': 0 };
+                state.categoryPoints[q.category] += ptsEarned;
+                
+                triggerCorrectConfetti();
+                
+                fbContainer.classList.add('bg-green-50', 'border-green-200');
+                fbIcon.innerHTML = '<i class="fa-solid fa-circle-check text-green-500 text-3xl"></i>';
+                fbTitle.className = 'font-bold text-xl text-green-700';
+                fbTitle.textContent = `¡Correcto! (+${ptsEarned} pt)`;
+                fbText.innerHTML = `${q.exp}`;
+                fbText.className = 'text-green-800 feedback-font font-bold mt-1';
+            } else {
+                const correctAnswerText = q.options[q.ans];
+                
+                quizCard.classList.add('animate-shake');
+                setTimeout(() => quizCard.classList.remove('animate-shake'), 400);
+
+                fbContainer.classList.add('bg-red-50', 'border-red-200');
+                fbIcon.innerHTML = '<i class="fa-solid fa-circle-xmark text-red-500 text-3xl"></i>';
+                fbTitle.className = 'font-bold text-xl text-red-700';
+                fbTitle.textContent = '¡Casi!';
+                fbText.innerHTML = `Era: <strong class="font-extrabold">${correctAnswerText}</strong>. <br><span class="text-slate-800 mt-2 block font-semibold">${q.exp}</span>`;
+                fbText.className = 'text-red-900 feedback-font mt-1';
+            }
+
+            document.getElementById('next-btn').classList.remove('hidden');
+            
+            if(state.currentQuestionIndex === state.currentQuiz.length - 1) {
+                document.getElementById('quiz-progress-bar').style.width = `100%`;
+                document.getElementById('next-btn').innerHTML = 'Ver Resultados <i class="fa-solid fa-flag-checkered ml-2"></i>';
+            }
+
+            updateDashboard();
+            saveData(); 
+        }
+
+        function nextQuestion() {
+            state.currentQuestionIndex++;
+            if (state.currentQuestionIndex < state.currentQuiz.length) {
+                renderQuestion();
+            } else {
+                state.history.push(state.points);
+                if(state.history.length > 15) state.history.shift();
+                
+                document.getElementById('next-btn').innerHTML = 'Siguiente Ejercicio <i class="fa-solid fa-arrow-right ml-2"></i>';
+                showDashboard();
+            }
+        }
+
+        // --- LÓGICA DEL GRÁFICO (Chart.js) ---
+        function initChart() {
+            if (chartInitialized) return;
+            
+            const canvas = document.getElementById('progressChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(79, 70, 229, 0.4)');
+            gradient.addColorStop(1, 'rgba(79, 70, 229, 0.05)');
+
+            const dataPoints = state.history.length > 1 ? state.history : [0, state.points];
+            const labels = dataPoints.map((_, i) => i === 0 ? 'Inicio' : `Int. ${i}`);
+
+            progressChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Puntos Acumulados',
+                        data: dataPoints,
+                        borderColor: '#4f46e5',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#4f46e5',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            padding: 10,
+                            titleFont: { family: 'Inter', size: 13 },
+                            bodyFont: { family: 'Inter', size: 14, weight: 'bold' },
+                            displayColors: false,
+                            cornerRadius: 6,
+                            callbacks: {
+                                label: function(context) { return context.parsed.y + ' pts'; }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9', drawBorder: false },
+                            ticks: { font: { family: 'Inter', weight: '600' }, color: '#94a3b8' }
+                        },
+                        x: {
+                            grid: { display: false, drawBorder: false },
+                            ticks: { font: { family: 'Inter', weight: '600' }, color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+            chartInitialized = true;
+        }
+
+        function updateChart() {
+            if (!progressChart) return;
+            const dataPoints = state.history.length > 1 ? state.history : [0, state.points];
+            const labels = dataPoints.map((_, i) => i === 0 ? 'Inicio' : `Int. ${i}`);
+            progressChart.data.labels = labels;
+            progressChart.data.datasets[0].data = dataPoints;
+            progressChart.update();
+        }
+    </script>
+</body>
+</html>
